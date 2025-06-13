@@ -1,0 +1,116 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(magrittr)
+library(dplyr)
+library(ggplot2)
+library(viridis)
+library(ggpointdensity)
+library(grid)
+```
+
+
+```{r}
+n = 10000
+z <- data.frame(z1 = rnorm(n, mean = 0, sd = 1), z2 = rnorm(n, mean = 0, sd = 2))
+```
+# Independent
+
+```{r}
+ggplot(z, aes(x = z1, y = z2)) + 
+  geom_pointdensity() +
+  scale_color_viridis(option = "inferno")
+```
+# Dependent
+
+$$X = \mu + \Sigma^{\frac{1}{2}} Z$$ so that
+$$\mathbb{E} X = \mu, Cov (X) = \Sigma^{\frac{1}{2}} Cov (Z) \Sigma^{-\frac{1}{2}} = \Sigma$$
+$$\implies X \sim \mathcal{N}(\mu, \Sigma)$$
+
+```{r, echo = FALSE, eval = FALSE}
+# Alternative look for graphs
+n = 10000
+cov_pairs = list(c(0, 0), c(1, 1), c(-1.5, -1.5), c(-1, 1))
+sd = c(2, 3)
+mu = c(0, 0)
+
+for (pair in cov_pairs) {
+  Sigma = matrix(c(sd[1], pair[1], pair[2], sd[2]), nrow=2)
+  R <- chol(Sigma)
+  Z <- matrix(rnorm(n*2), nrow=2)
+  t(R)
+  X <- t(R) %*% Z
+  X <- sweep(X, 1, mu, "+")
+  df <- data.frame(x = X[1,], y = X[2,])
+  
+  # cov_str = paste0("MVN Scatterplot, n = ", n, ", covariances ", list(Sigma[1:2, 1:2]))
+  
+  a <- Sigma[1, 1]; b <- Sigma[1, 2]
+  c <- Sigma[2, 1]; d <- Sigma[2, 2]
+  
+  title_expr <- substitute(
+    "MVN Scatterplot, n = " * n_val * ", " *
+    Sigma == phantom() * bgroup("(", atop(a1 * "  " * b1, c1 * "  " * d1), ")"),
+    list(n_val = n, a1 = a, b1 = b, c1 = c, d1 = d)
+  )
+  
+  plot <- ggplot(df, aes(x = x, y = y)) +
+    geom_pointdensity() +
+    labs(title = title_expr,
+         x = "X", y = "Y") +
+    theme(plot.caption = element_text(hjust = 0)) +
+    scale_color_viridis(option = "inferno")
+  
+  print(plot)
+}
+```
+```{r}
+n = 10000
+cov_pairs = list(c(0, 0), c(1, 1), c(-1.5, -1.5), c(-1, 1))
+sd = c(2, 3)
+mu = c(0, 0)
+
+for (pair in cov_pairs) {
+  Sigma = matrix(c(sd[1], pair[1], pair[2], sd[2]), nrow=2)
+  R <- chol(Sigma)
+  Z <- matrix(rnorm(n*2), nrow=2)
+  t(R)
+  X <- t(R) %*% Z
+  X <- sweep(X, 1, mu, "+")
+  df <- data.frame(x = X[1,], y = X[2,])
+  
+  # cov_str = paste0("MVN Scatterplot, n = ", n, ", covariances ", list(Sigma[1:2, 1:2]))
+  
+  a <- Sigma[1,1]; b <- Sigma[1,2]
+  c <- Sigma[2,1]; d <- Sigma[2,2]
+  
+  title_expr = "MVN Scatterplot"
+  
+  expr_str <- deparse(
+  substitute(
+    atop(n == n_val,
+         Sigma == phantom() * bgroup("(", atop(a1 * "  " * b1, c1 * "  " * d1), ")")),
+    list(n_val = n, a1 = a, b1 = b, c1 = c, d1 = d)
+    )
+  )
+
+  plot <- ggplot(df, aes(x = x, y = y)) +
+    geom_pointdensity() +
+    labs(title = title_expr,
+         x = "X", y = "Y") +
+    theme(plot.caption = element_text(hjust = 0), plot.margin = margin(5.5, 20, 5.5, 5.5)) +
+    scale_color_viridis(option = "inferno")
+  
+  # Draw plot and overlay math label
+  grid.newpage()
+  grid.draw(ggplotGrob(plot))
+  grid.text(label = parse(text = expr_str),
+          x = unit(0.88, "npc"), y = unit(0.78, "npc"),
+          just = "left", gp = gpar(fontsize = 12))
+}
+```
+
+
